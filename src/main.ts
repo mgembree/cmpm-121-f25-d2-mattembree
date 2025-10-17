@@ -3,5 +3,6 @@ import "./style.css";
 
 document.body.innerHTML = `
 <h1>Sketchpad</h1>
+<p>Example image asset: <img src="${exampleIconUrl}" class="icon" /></p>
 <canvas id="sketchPad" width="256" height="256"></canvas>
 `;
