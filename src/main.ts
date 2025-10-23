@@ -3,7 +3,7 @@ import "./style.css";
 
 document.body.innerHTML = `
 <h1>Sketchpad</h1>
-<p>Example image asset: <img src="${exampleIconUrl}" class="icon" /></p>
+<p>Draw on the canvas below. Use "undo" and "redo" buttons to revert or reapply strokes.</p>
 `;
 "use strict";
 
@@ -17,6 +17,8 @@ const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 // Store user's drawing as an array of strokes. Each stroke is an array of points.
 type Point = { x: number; y: number };
 const strokes: Point[][] = [];
+// redo stack holds strokes that were undone
+const redoStack: Point[][] = [];
 let currentStroke: Point[] | null = null;
 const cursor = { active: false, x: 0, y: 0 };
 
@@ -34,6 +36,7 @@ canvas.addEventListener("drawing-changed", () => {
     }
     ctx.stroke();
   }
+  updateUndoRedoButtons();
 });
 
 canvas.addEventListener("mousedown", (e) => {
@@ -43,6 +46,8 @@ canvas.addEventListener("mousedown", (e) => {
   // new stroke started, add the initial point
   currentStroke = [];
   strokes.push(currentStroke);
+  // starting a new action invalidates the redo stack
+  redoStack.length = 0;
   currentStroke.push({ x: cursor.x, y: cursor.y });
   //drawing started, notify observers
   canvas.dispatchEvent(new Event("drawing-changed"));
@@ -74,8 +79,45 @@ const clearButton = document.createElement("button");
 clearButton.innerHTML = "clear";
 document.body.append(clearButton);
 
+// Undo / Redo buttons
+const undoButton = document.createElement("button");
+undoButton.innerHTML = "undo";
+undoButton.disabled = true;
+document.body.append(undoButton);
+
+const redoButton = document.createElement("button");
+redoButton.innerHTML = "redo";
+redoButton.disabled = true;
+document.body.append(redoButton);
+
+function updateUndoRedoButtons() {
+  undoButton.disabled = strokes.length === 0;
+  redoButton.disabled = redoStack.length === 0;
+}
+
 clearButton.addEventListener("click", () => {
   // clear stored strokes
   strokes.length = 0;
+  redoStack.length = 0;
   canvas.dispatchEvent(new Event("drawing-changed"));
+});
+
+// Undo: pop from strokes -> push to redoStack
+undoButton.addEventListener("click", () => {
+  if (strokes.length === 0) return;
+  const s = strokes.pop();
+  if (s) {
+    redoStack.push(s);
+    canvas.dispatchEvent(new Event("drawing-changed"));
+  }
+});
+
+// Redo: pop from redoStack -> push to strokes
+redoButton.addEventListener("click", () => {
+  if (redoStack.length === 0) return;
+  const s = redoStack.pop();
+  if (s) {
+    strokes.push(s);
+    canvas.dispatchEvent(new Event("drawing-changed"));
+  }
 });
