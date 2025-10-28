@@ -76,6 +76,47 @@ selectTool(thinTool, 2);
 thinTool.addEventListener("click", () => selectTool(thinTool, 2));
 thickTool.addEventListener("click", () => selectTool(thickTool, 6));
 
+interface PreviewCommand {
+  draw(ctx: CanvasRenderingContext2D): void;
+}
+
+class CirclePreview implements PreviewCommand {
+  x = 0;
+  y = 0;
+  thickness = 2;
+  constructor(x: number, y: number, thickness: number) {
+    this.x = x;
+    this.y = y;
+    this.thickness = thickness;
+  }
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.lineWidth = 1;
+    const r = Math.max(1, this.thickness / 2);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// current preview command (null when none)
+let previewCommand: PreviewCommand | null = null;
+
+// When the tool moves over the canvas, update the preview (but only when not drawing)
+canvas.addEventListener("tool-moved", (ev) => {
+  const detail = (ev as CustomEvent).detail as {
+    x: number;
+    y: number;
+    thickness: number;
+  };
+  if (!cursor.active) {
+    previewCommand = new CirclePreview(detail.x, detail.y, detail.thickness);
+    canvas.dispatchEvent(new Event("drawing-changed"));
+  }
+});
+
 // Redraw handler: clears the canvas and redraws all strokes from data.
 canvas.addEventListener("drawing-changed", () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -84,6 +125,10 @@ canvas.addEventListener("drawing-changed", () => {
   for (const stroke of strokes) {
     stroke.display(ctx);
   }
+  // draw preview if present and user is not actively drawing
+  if (previewCommand && !cursor.active) {
+    previewCommand.draw(ctx);
+  }
   updateUndoRedoButtons();
 });
 
@@ -91,17 +136,26 @@ canvas.addEventListener("mousedown", (e) => {
   cursor.active = true;
   cursor.x = e.offsetX;
   cursor.y = e.offsetY;
+  // hide preview while drawing
+  previewCommand = null;
   currentStroke = new MarkerLine(cursor.x, cursor.y, currentToolThickness);
   strokes.push(currentStroke);
   redoStack.length = 0;
   canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
-// Add points to the current stroke while the mouse is down
+// Add points to the current stroke while the mouse is down.
 canvas.addEventListener("mousemove", (e) => {
+  const px = e.offsetX;
+  const py = e.offsetY;
+  // always notify about the tool position
+  canvas.dispatchEvent(
+    new CustomEvent("tool-moved", {
+      detail: { x: px, y: py, thickness: currentToolThickness },
+    }),
+  );
+
   if (cursor.active && currentStroke) {
-    const px = e.offsetX;
-    const py = e.offsetY;
     currentStroke.drag(px, py);
     cursor.x = px;
     cursor.y = py;
@@ -116,7 +170,12 @@ const endStroke = () => {
 };
 
 canvas.addEventListener("mouseup", endStroke);
-canvas.addEventListener("mouseleave", endStroke);
+canvas.addEventListener("mouseleave", () => {
+  // finish any in-progress stroke and clear the preview when leaving
+  endStroke();
+  previewCommand = null;
+  canvas.dispatchEvent(new Event("drawing-changed"));
+});
 
 const clearButton = document.createElement("button");
 clearButton.innerHTML = "clear";
