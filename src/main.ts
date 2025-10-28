@@ -18,7 +18,9 @@ type Point = { x: number; y: number };
 
 class MarkerLine {
   points: Point[] = [];
-  constructor(x?: number, y?: number) {
+  thickness: number = 2;
+  constructor(x?: number, y?: number, thickness: number = 2) {
+    this.thickness = thickness;
     if (x !== undefined && y !== undefined) this.points.push({ x, y });
   }
   drag(x: number, y: number) {
@@ -26,12 +28,15 @@ class MarkerLine {
   }
   display(ctx: CanvasRenderingContext2D) {
     if (this.points.length === 0) return;
+    ctx.save();
+    ctx.lineWidth = this.thickness;
     ctx.beginPath();
     ctx.moveTo(this.points[0].x, this.points[0].y);
     for (let i = 1; i < this.points.length; i++) {
       ctx.lineTo(this.points[i].x, this.points[i].y);
     }
     ctx.stroke();
+    ctx.restore();
   }
 }
 
@@ -39,6 +44,37 @@ const strokes: MarkerLine[] = [];
 const redoStack: MarkerLine[] = [];
 let currentStroke: MarkerLine | null = null;
 const cursor = { active: false, x: 0, y: 0 };
+
+// Tool state default thickness
+let currentToolThickness = 2;
+
+const toolBar = document.createElement("div");
+toolBar.className = "toolbar";
+
+const thinTool = document.createElement("button");
+thinTool.textContent = "thin";
+thinTool.className = "tool-button";
+toolBar.append(thinTool);
+
+const thickTool = document.createElement("button");
+thickTool.textContent = "thick";
+thickTool.className = "tool-button";
+toolBar.append(thickTool);
+
+document.body.append(toolBar);
+
+function selectTool(button: HTMLButtonElement, thickness: number) {
+  currentToolThickness = thickness;
+  for (const b of toolBar.querySelectorAll("button")) {
+    b.classList.remove("selectedTool");
+  }
+  button.classList.add("selectedTool");
+}
+
+selectTool(thinTool, 2);
+
+thinTool.addEventListener("click", () => selectTool(thinTool, 2));
+thickTool.addEventListener("click", () => selectTool(thickTool, 6));
 
 // Redraw handler: clears the canvas and redraws all strokes from data.
 canvas.addEventListener("drawing-changed", () => {
@@ -55,8 +91,7 @@ canvas.addEventListener("mousedown", (e) => {
   cursor.active = true;
   cursor.x = e.offsetX;
   cursor.y = e.offsetY;
-  // create a new MarkerLine and add the initial point
-  currentStroke = new MarkerLine(cursor.x, cursor.y);
+  currentStroke = new MarkerLine(cursor.x, cursor.y, currentToolThickness);
   strokes.push(currentStroke);
   redoStack.length = 0;
   canvas.dispatchEvent(new Event("drawing-changed"));

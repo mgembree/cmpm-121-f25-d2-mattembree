@@ -9,3 +9,18 @@ canvas {
   box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
   border-radius: 20px / 10px;
 }
+
+.toolbar {
+  margin: 8px 0;
+}
+
+.tool-button {
+  margin-right: 6px;
+  padding: 6px 10px;
+}
+
+.selectedTool {
+  background: #333;
+  color: #fff;
+  border-radius: 6px;
+}
