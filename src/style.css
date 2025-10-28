@@ -24,3 +24,12 @@ canvas {
   color: #fff;
   border-radius: 6px;
 }
+
+.sticker-bar {
+  margin: 8px 0;
+}
+.sticker-button {
+  margin-right: 6px;
+  padding: 6px 8px;
+  font-size: 18px;
+}
