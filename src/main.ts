@@ -13,12 +13,31 @@ document.body.append(canvas);
 
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 
-// Store user's drawing as an array of strokes. Each stroke is an array of points.
+// Store user's drawing as an array of drawable stroke objects.
 type Point = { x: number; y: number };
-const strokes: Point[][] = [];
-// redo stack holds strokes that were undone
-const redoStack: Point[][] = [];
-let currentStroke: Point[] | null = null;
+
+class MarkerLine {
+  points: Point[] = [];
+  constructor(x?: number, y?: number) {
+    if (x !== undefined && y !== undefined) this.points.push({ x, y });
+  }
+  drag(x: number, y: number) {
+    this.points.push({ x, y });
+  }
+  display(ctx: CanvasRenderingContext2D) {
+    if (this.points.length === 0) return;
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+    for (let i = 1; i < this.points.length; i++) {
+      ctx.lineTo(this.points[i].x, this.points[i].y);
+    }
+    ctx.stroke();
+  }
+}
+
+const strokes: MarkerLine[] = [];
+const redoStack: MarkerLine[] = [];
+let currentStroke: MarkerLine | null = null;
 const cursor = { active: false, x: 0, y: 0 };
 
 // Redraw handler: clears the canvas and redraws all strokes from data.
@@ -27,13 +46,7 @@ canvas.addEventListener("drawing-changed", () => {
   ctx.lineWidth = 2;
   ctx.strokeStyle = "#000";
   for (const stroke of strokes) {
-    if (stroke.length === 0) continue;
-    ctx.beginPath();
-    ctx.moveTo(stroke[0].x, stroke[0].y);
-    for (let i = 1; i < stroke.length; i++) {
-      ctx.lineTo(stroke[i].x, stroke[i].y);
-    }
-    ctx.stroke();
+    stroke.display(ctx);
   }
   updateUndoRedoButtons();
 });
@@ -42,13 +55,10 @@ canvas.addEventListener("mousedown", (e) => {
   cursor.active = true;
   cursor.x = e.offsetX;
   cursor.y = e.offsetY;
-  // new stroke started, add the initial point
-  currentStroke = [];
+  // create a new MarkerLine and add the initial point
+  currentStroke = new MarkerLine(cursor.x, cursor.y);
   strokes.push(currentStroke);
-  // starting a new action invalidates the redo stack
   redoStack.length = 0;
-  currentStroke.push({ x: cursor.x, y: cursor.y });
-  //drawing started, notify observers
   canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
@@ -57,10 +67,9 @@ canvas.addEventListener("mousemove", (e) => {
   if (cursor.active && currentStroke) {
     const px = e.offsetX;
     const py = e.offsetY;
-    currentStroke.push({ x: px, y: py });
+    currentStroke.drag(px, py);
     cursor.x = px;
     cursor.y = py;
-    // notify observers that the drawing changed
     canvas.dispatchEvent(new Event("drawing-changed"));
   }
 });
@@ -106,6 +115,7 @@ undoButton.addEventListener("click", () => {
   if (strokes.length === 0) return;
   const s = strokes.pop();
   if (s) {
+    // move the popped stroke to the redo stack
     redoStack.push(s);
     canvas.dispatchEvent(new Event("drawing-changed"));
   }
