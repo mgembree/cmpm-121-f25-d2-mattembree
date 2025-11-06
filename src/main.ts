@@ -25,8 +25,15 @@ interface DrawableCommand {
 class MarkerLine implements DrawableCommand {
   points: Point[] = [];
   thickness: number = 2;
-  constructor(x?: number, y?: number, thickness: number = 2) {
+  color: string = "#000";
+  constructor(
+    x?: number,
+    y?: number,
+    thickness: number = 2,
+    color: string = "#000",
+  ) {
     this.thickness = thickness;
+    this.color = color;
     if (x !== undefined && y !== undefined) this.points.push({ x, y });
   }
   drag(x: number, y: number) {
@@ -36,6 +43,8 @@ class MarkerLine implements DrawableCommand {
     if (this.points.length === 0) return;
     ctx.save();
     ctx.lineWidth = this.thickness;
+    ctx.strokeStyle = this.color;
+    ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(this.points[0].x, this.points[0].y);
     for (let i = 1; i < this.points.length; i++) {
@@ -82,6 +91,7 @@ class CirclePreview implements PreviewCommand {
   x = 0;
   y = 0;
   thickness = 2;
+  color = "#000";
   constructor(x: number, y: number, thickness: number) {
     this.x = x;
     this.y = y;
@@ -89,7 +99,7 @@ class CirclePreview implements PreviewCommand {
   }
   draw(ctx: CanvasRenderingContext2D) {
     ctx.save();
-    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.strokeStyle = this.color || "rgba(0,0,0,0.6)";
     ctx.lineWidth = 1;
     const r = Math.max(1, this.thickness / 2);
     ctx.beginPath();
@@ -109,22 +119,81 @@ let currentToolThickness = 2;
 // renamed tools: "brush" = marker, "stamp" = sticker
 let currentTool: "brush" | "stamp" = "brush";
 let currentStickerEmoji = "⭐";
+let currentToolColor = "#000000";
 
 // toolbar for marker tools
 const toolBar = document.createElement("div");
 toolBar.className = "toolbar";
 
 const thinTool = document.createElement("button");
-thinTool.textContent = "Fine Brush";
+thinTool.textContent = "Brush 1";
 thinTool.className = "tool-button";
 toolBar.append(thinTool);
 
 const thickTool = document.createElement("button");
-thickTool.textContent = "Bold Brush";
+thickTool.textContent = "Brush 2";
 thickTool.className = "tool-button";
 toolBar.append(thickTool);
 
 document.body.append(toolBar);
+
+// Color picker and thickness slider
+const controlsBar = document.createElement("div");
+controlsBar.className = "controls-bar";
+
+const colorInput = document.createElement("input");
+colorInput.type = "color";
+colorInput.value = currentToolColor;
+colorInput.className = "color-input";
+controlsBar.append(colorInput);
+
+const thicknessLabel = document.createElement("span");
+thicknessLabel.className = "thickness-label";
+thicknessLabel.textContent = String(currentToolThickness);
+controlsBar.append(thicknessLabel);
+
+const thicknessSlider = document.createElement("input");
+thicknessSlider.type = "range";
+thicknessSlider.min = "1";
+thicknessSlider.max = "40";
+thicknessSlider.step = "0.5";
+thicknessSlider.value = String(currentToolThickness);
+thicknessSlider.className = "thickness-slider";
+controlsBar.append(thicknessSlider);
+
+document.body.append(controlsBar);
+
+// wire up controls
+colorInput.addEventListener("input", () => {
+  currentToolColor = colorInput.value;
+  // update preview immediately
+  canvas.dispatchEvent(
+    new CustomEvent("tool-moved", {
+      detail: {
+        x: cursor.x,
+        y: cursor.y,
+        thickness: currentToolThickness,
+        color: currentToolColor,
+      },
+    }),
+  );
+});
+
+thicknessSlider.addEventListener("input", () => {
+  currentToolThickness = Number(thicknessSlider.value);
+  thicknessLabel.textContent = String(currentToolThickness);
+  // update preview immediately
+  canvas.dispatchEvent(
+    new CustomEvent("tool-moved", {
+      detail: {
+        x: cursor.x,
+        y: cursor.y,
+        thickness: currentToolThickness,
+        color: currentToolColor,
+      },
+    }),
+  );
+});
 
 function selectTool(button: HTMLButtonElement, thickness: number) {
   currentToolThickness = thickness;
@@ -136,6 +205,20 @@ function selectTool(button: HTMLButtonElement, thickness: number) {
     b.classList.remove("selectedTool");
   }
   button.classList.add("selectedTool");
+  // sync slider and label
+  thicknessSlider.value = String(currentToolThickness);
+  thicknessLabel.textContent = String(currentToolThickness);
+  // update preview immediately
+  canvas.dispatchEvent(
+    new CustomEvent("tool-moved", {
+      detail: {
+        x: cursor.x,
+        y: cursor.y,
+        thickness: currentToolThickness,
+        color: currentToolColor,
+      },
+    }),
+  );
 }
 
 selectTool(thinTool, 2);
@@ -175,7 +258,12 @@ function createStickerButton(emoji: string) {
     // fire tool-moved so the preview appears at the current cursor position
     canvas.dispatchEvent(
       new CustomEvent("tool-moved", {
-        detail: { x: cursor.x, y: cursor.y, thickness: currentToolThickness },
+        detail: {
+          x: cursor.x,
+          y: cursor.y,
+          thickness: currentToolThickness,
+          color: currentToolColor,
+        },
       }),
     );
   });
@@ -204,6 +292,7 @@ canvas.addEventListener("tool-moved", (ev) => {
     x: number;
     y: number;
     thickness?: number;
+    color?: string;
   };
   if (!cursor.active) {
     if (currentTool === "brush") {
@@ -212,6 +301,9 @@ canvas.addEventListener("tool-moved", (ev) => {
         detail.y,
         detail.thickness ?? currentToolThickness,
       );
+      // attach color to preview when available
+      (previewCommand as CirclePreview).color = detail.color ??
+        currentToolColor;
     } else {
       // simple sticker preview
       previewCommand = new (class implements PreviewCommand {
@@ -253,7 +345,12 @@ canvas.addEventListener("mousedown", (e) => {
   cursor.y = e.offsetY;
   previewCommand = null; // hide preview while interacting
   if (currentTool === "brush") {
-    currentStroke = new MarkerLine(cursor.x, cursor.y, currentToolThickness);
+    currentStroke = new MarkerLine(
+      cursor.x,
+      cursor.y,
+      currentToolThickness,
+      currentToolColor,
+    );
     strokes.push(currentStroke);
   } else {
     const size = currentToolThickness * 3;

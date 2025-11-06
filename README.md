@@ -1,3 +1,8 @@
-# CMPM 121 D2 Project
+# Sketchpad — CMPM 121 demo
 
-## This demo will be an interactive sketchpad that allows the user to draw on a canvas
+A small interactive sketchpad built with TypeScript + Deno that demonstrates an event-driven canvas drawing app.
+
+Development notes
+
+- Strokes capture their color and thickness when they are created, so changing the color or slider only affects strokes drawn after the change.
+- If you add or change features, keep the `drawing-changed` + `tool-moved` events consistent so previews and redraws remain responsive.

@@ -40,6 +40,33 @@ canvas {
   margin: 10px 0;
 }
 
+.controls-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+}
+
+.color-input {
+  width: 40px;
+  height: 32px;
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid rgba(30, 30, 30, 0.06);
+}
+
+.thickness-slider {
+  width: 160px;
+}
+
+.thickness-label {
+  min-width: 36px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 .tool-button,
 .sticker-button,
 button {
