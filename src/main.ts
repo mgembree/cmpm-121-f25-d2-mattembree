@@ -98,53 +98,55 @@ class CirclePreview implements PreviewCommand {
     ctx.restore();
   }
 }
+  // Global state and tool UI setup
+  const strokes: DrawableCommand[] = [];
+  const redoStack: DrawableCommand[] = [];
+  let currentStroke: DrawableCommand | null = null;
+  const cursor = { active: false, x: 0, y: 0 };
 
-// Drawing state
-const strokes: DrawableCommand[] = [];
-const redoStack: DrawableCommand[] = [];
-let currentStroke: DrawableCommand | null = null;
-const cursor = { active: false, x: 0, y: 0 };
+  // Tool state
+  let currentToolThickness = 2;
+  let currentTool: "marker" | "sticker" = "marker";
+  let currentStickerEmoji = "⭐";
 
-// Tool state
-let currentToolThickness = 2;
-let currentTool: "marker" | "sticker" = "marker";
-let currentStickerEmoji = "⭐";
+  // toolbar for marker tools
+  const toolBar = document.createElement("div");
+  toolBar.className = "toolbar";
 
-// Preview
-let previewCommand: PreviewCommand | null = null;
+  const thinTool = document.createElement("button");
+  thinTool.textContent = "thin";
+  thinTool.className = "tool-button";
+  toolBar.append(thinTool);
 
-// UI: toolbar for marker tools
-const toolBar = document.createElement("div");
-toolBar.className = "toolbar";
+  const thickTool = document.createElement("button");
+  thickTool.textContent = "thick";
+  thickTool.className = "tool-button";
+  toolBar.append(thickTool);
 
-const thinTool = document.createElement("button");
-thinTool.textContent = "thin";
-thinTool.className = "tool-button";
-toolBar.append(thinTool);
+  document.body.append(toolBar);
 
-const thickTool = document.createElement("button");
-thickTool.textContent = "thick";
-thickTool.className = "tool-button";
-toolBar.append(thickTool);
-
-document.body.append(toolBar);
-
-function selectTool(button: HTMLButtonElement, thickness: number) {
-  currentToolThickness = thickness;
-  currentTool = "marker";
-  // clear visual selection on both tool and sticker bars
-  for (const b of toolBar.querySelectorAll("button")) {
-    b.classList.remove("selectedTool");
+  function selectTool(button: HTMLButtonElement, thickness: number) {
+    currentToolThickness = thickness;
+    currentTool = "marker";
+    for (const b of toolBar.querySelectorAll("button")) {
+      b.classList.remove("selectedTool");
+    }
+    for (const b of document.querySelectorAll(".sticker-button")) {
+      b.classList.remove("selectedTool");
+    }
+    button.classList.add("selectedTool");
   }
-  for (const b of document.querySelectorAll(".sticker-button")) {
-    b.classList.remove("selectedTool");
-  }
-  button.classList.add("selectedTool");
-}
 
-selectTool(thinTool, 2);
-thinTool.addEventListener("click", () => selectTool(thinTool, 2));
-thickTool.addEventListener("click", () => selectTool(thickTool, 6));
+  selectTool(thinTool, 2);
+  thinTool.addEventListener("click", () => selectTool(thinTool, 2));
+  thickTool.addEventListener("click", () => selectTool(thickTool, 6));
+
+  // current preview command (null when none)
+  let previewCommand: PreviewCommand | null = null;
+
+  selectTool(thinTool, 2);
+  thinTool.addEventListener("click", () => selectTool(thinTool, 2));
+  thickTool.addEventListener("click", () => selectTool(thickTool, 6));
 
 // Data-driven sticker list (JSON-like array at top-level)
 const stickers: string[] = ["⭐", "🔥", "🌈"];
@@ -336,4 +338,36 @@ redoButton.addEventListener("click", () => {
     strokes.push(s);
     canvas.dispatchEvent(new Event("drawing-changed"));
   }
+});
+
+// Export button (controls)
+const exportButton = document.createElement("button");
+exportButton.innerHTML = "export";
+document.body.append(exportButton);
+
+// Export: render display list to a 1024x1024 offscreen canvas and download PNG
+exportButton.addEventListener("click", () => {
+  const size = 1024;
+  const scaleFactorX = size / canvas.width;
+  const scaleFactorY = size / canvas.height;
+  const off = document.createElement("canvas");
+  off.width = size;
+  off.height = size;
+  const offCtx = off.getContext("2d") as CanvasRenderingContext2D;
+  if (!offCtx) return;
+  // scale so that drawing commands map to the larger canvas
+  offCtx.save();
+  offCtx.scale(scaleFactorX, scaleFactorY);
+  // draw each drawable command (do NOT draw previewCommand)
+  for (const cmd of strokes) {
+    // each command draws assuming the original canvas coordinate space
+    cmd.display(offCtx);
+  }
+  offCtx.restore();
+
+  // trigger download as PNG
+  const anchor = document.createElement("a");
+  anchor.href = off.toDataURL("image/png");
+  anchor.download = "sketchpad.png";
+  anchor.click();
 });
