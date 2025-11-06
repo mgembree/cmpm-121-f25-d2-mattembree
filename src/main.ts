@@ -98,55 +98,55 @@ class CirclePreview implements PreviewCommand {
     ctx.restore();
   }
 }
-  // Global state and tool UI setup
-  const strokes: DrawableCommand[] = [];
-  const redoStack: DrawableCommand[] = [];
-  let currentStroke: DrawableCommand | null = null;
-  const cursor = { active: false, x: 0, y: 0 };
+// Global state and tool UI setup
+const strokes: DrawableCommand[] = [];
+const redoStack: DrawableCommand[] = [];
+let currentStroke: DrawableCommand | null = null;
+const cursor = { active: false, x: 0, y: 0 };
 
-  // Tool state
-  let currentToolThickness = 2;
-  let currentTool: "marker" | "sticker" = "marker";
-  let currentStickerEmoji = "⭐";
+// Tool state
+let currentToolThickness = 2;
+let currentTool: "marker" | "sticker" = "marker";
+let currentStickerEmoji = "⭐";
 
-  // toolbar for marker tools
-  const toolBar = document.createElement("div");
-  toolBar.className = "toolbar";
+// toolbar for marker tools
+const toolBar = document.createElement("div");
+toolBar.className = "toolbar";
 
-  const thinTool = document.createElement("button");
-  thinTool.textContent = "thin";
-  thinTool.className = "tool-button";
-  toolBar.append(thinTool);
+const thinTool = document.createElement("button");
+thinTool.textContent = "thin";
+thinTool.className = "tool-button";
+toolBar.append(thinTool);
 
-  const thickTool = document.createElement("button");
-  thickTool.textContent = "thick";
-  thickTool.className = "tool-button";
-  toolBar.append(thickTool);
+const thickTool = document.createElement("button");
+thickTool.textContent = "thick";
+thickTool.className = "tool-button";
+toolBar.append(thickTool);
 
-  document.body.append(toolBar);
+document.body.append(toolBar);
 
-  function selectTool(button: HTMLButtonElement, thickness: number) {
-    currentToolThickness = thickness;
-    currentTool = "marker";
-    for (const b of toolBar.querySelectorAll("button")) {
-      b.classList.remove("selectedTool");
-    }
-    for (const b of document.querySelectorAll(".sticker-button")) {
-      b.classList.remove("selectedTool");
-    }
-    button.classList.add("selectedTool");
+function selectTool(button: HTMLButtonElement, thickness: number) {
+  currentToolThickness = thickness;
+  currentTool = "marker";
+  for (const b of toolBar.querySelectorAll("button")) {
+    b.classList.remove("selectedTool");
   }
+  for (const b of document.querySelectorAll(".sticker-button")) {
+    b.classList.remove("selectedTool");
+  }
+  button.classList.add("selectedTool");
+}
 
-  selectTool(thinTool, 2);
-  thinTool.addEventListener("click", () => selectTool(thinTool, 2));
-  thickTool.addEventListener("click", () => selectTool(thickTool, 6));
+selectTool(thinTool, 2);
+thinTool.addEventListener("click", () => selectTool(thinTool, 2));
+thickTool.addEventListener("click", () => selectTool(thickTool, 6));
 
-  // current preview command (null when none)
-  let previewCommand: PreviewCommand | null = null;
+// current preview command (null when none)
+let previewCommand: PreviewCommand | null = null;
 
-  selectTool(thinTool, 2);
-  thinTool.addEventListener("click", () => selectTool(thinTool, 2));
-  thickTool.addEventListener("click", () => selectTool(thickTool, 6));
+selectTool(thinTool, 2);
+thinTool.addEventListener("click", () => selectTool(thinTool, 2));
+thickTool.addEventListener("click", () => selectTool(thickTool, 6));
 
 // Data-driven sticker list (JSON-like array at top-level)
 const stickers: string[] = ["⭐", "🔥", "🌈"];
