@@ -1,35 +1,90 @@
-.icon {
-  width: 64px;
-  vertical-align: top;
-  border: 1px solid salmon;
+:root {
+  --toolbar-bg: #fafafa;
+  --accent: #5b8def;
+  --accent-2: #3a6fd8;
+  --muted: #666;
+}
+
+body {
+  font-family:
+    Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial;
+  padding: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
+  color: #222;
+}
+
+h1 {
+  margin: 0 0 6px 0;
+}
+p {
+  margin: 0 0 12px 0;
+  color: var(--muted);
 }
 
 canvas {
-  border: 1px solid black;
-  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
-  border-radius: 20px / 10px;
+  border: 1px solid rgba(30, 30, 30, 0.08);
+  box-shadow: 0 6px 18px rgba(36, 56, 90, 0.08);
+  border-radius: 12px;
+  display: block;
 }
 
-.toolbar {
-  margin: 8px 0;
+.toolbar,
+.sticker-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  background: var(--toolbar-bg);
+  border-radius: 10px;
+  margin: 10px 0;
+}
+
+.tool-button,
+.sticker-button,
+button {
+  background: white;
+  border: 1px solid rgba(30, 30, 30, 0.06);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease,
+    background 0.12s ease;
+  font-weight: 600;
+}
+
+.tool-button:hover,
+.sticker-button:hover,
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(50, 80, 150, 0.06);
+}
+
+.tool-button.selectedTool,
+.sticker-button.selectedTool {
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  color: white;
+  box-shadow: 0 8px 24px rgba(59, 111, 216, 0.18);
 }
 
 .tool-button {
-  margin-right: 6px;
-  padding: 6px 10px;
-}
-
-.selectedTool {
-  background: #333;
-  color: #fff;
-  border-radius: 6px;
-}
-
-.sticker-bar {
-  margin: 8px 0;
+  font-size: 13px;
 }
 .sticker-button {
-  margin-right: 6px;
-  padding: 6px 8px;
   font-size: 18px;
+  padding: 8px;
+}
+
+/* smaller utility buttons (clear/undo/redo/export) */
+button[disabled] {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+
+/* layout spacing when rendering the page */
+body > div, body > canvas, body > button {
+  margin-top: 8px;
 }

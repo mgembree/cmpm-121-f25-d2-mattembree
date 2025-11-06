@@ -106,7 +106,8 @@ const cursor = { active: false, x: 0, y: 0 };
 
 // Tool state
 let currentToolThickness = 2;
-let currentTool: "marker" | "sticker" = "marker";
+// renamed tools: "brush" = marker, "stamp" = sticker
+let currentTool: "brush" | "stamp" = "brush";
 let currentStickerEmoji = "⭐";
 
 // toolbar for marker tools
@@ -114,12 +115,12 @@ const toolBar = document.createElement("div");
 toolBar.className = "toolbar";
 
 const thinTool = document.createElement("button");
-thinTool.textContent = "thin";
+thinTool.textContent = "Fine Brush";
 thinTool.className = "tool-button";
 toolBar.append(thinTool);
 
 const thickTool = document.createElement("button");
-thickTool.textContent = "thick";
+thickTool.textContent = "Bold Brush";
 thickTool.className = "tool-button";
 toolBar.append(thickTool);
 
@@ -127,7 +128,7 @@ document.body.append(toolBar);
 
 function selectTool(button: HTMLButtonElement, thickness: number) {
   currentToolThickness = thickness;
-  currentTool = "marker";
+  currentTool = "brush";
   for (const b of toolBar.querySelectorAll("button")) {
     b.classList.remove("selectedTool");
   }
@@ -139,14 +140,13 @@ function selectTool(button: HTMLButtonElement, thickness: number) {
 
 selectTool(thinTool, 2);
 thinTool.addEventListener("click", () => selectTool(thinTool, 2));
-thickTool.addEventListener("click", () => selectTool(thickTool, 6));
+// make the "thick" brush 25% thicker than previous 6 -> 7.5
+thickTool.addEventListener("click", () => selectTool(thickTool, 7.5));
 
 // current preview command (null when none)
 let previewCommand: PreviewCommand | null = null;
 
-selectTool(thinTool, 2);
-thinTool.addEventListener("click", () => selectTool(thinTool, 2));
-thickTool.addEventListener("click", () => selectTool(thickTool, 6));
+// (already initialized above)
 
 // Data-driven sticker list (JSON-like array at top-level)
 const stickers: string[] = ["⭐", "🔥", "🌈"];
@@ -161,7 +161,7 @@ function createStickerButton(emoji: string) {
   b.className = "sticker-button";
   b.textContent = emoji;
   b.addEventListener("click", () => {
-    currentTool = "sticker";
+    currentTool = "stamp";
     currentStickerEmoji = emoji;
     // clear marker selection
     for (const btn of toolBar.querySelectorAll("button")) {
@@ -206,7 +206,7 @@ canvas.addEventListener("tool-moved", (ev) => {
     thickness?: number;
   };
   if (!cursor.active) {
-    if (currentTool === "marker") {
+    if (currentTool === "brush") {
       previewCommand = new CirclePreview(
         detail.x,
         detail.y,
@@ -252,7 +252,7 @@ canvas.addEventListener("mousedown", (e) => {
   cursor.x = e.offsetX;
   cursor.y = e.offsetY;
   previewCommand = null; // hide preview while interacting
-  if (currentTool === "marker") {
+  if (currentTool === "brush") {
     currentStroke = new MarkerLine(cursor.x, cursor.y, currentToolThickness);
     strokes.push(currentStroke);
   } else {
